@@ -1,0 +1,13 @@
+{
+  "name": "cartoon-pipeline-auto",
+  "version": "2.0.0",
+  "description": "Cartoon Pipeline with export for Higgsfield/Magnific automation",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "node-fetch": "^2.7.0"
+  }
+}
