@@ -142,7 +142,7 @@ app.post('/api/generate-image', async (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`Cartoon Pipeline AUTO running on port ${PORT}`);
+  console.log(`Cartoon Pipeline AUTO v3 running on port ${PORT}`);
   console.log(`OPENAI_API_KEY set: ${!!process.env.OPENAI_API_KEY}`);
   console.log(`HIGGSFIELD keys set: ${!!process.env.HIGGSFIELD_API_KEY_ID && !!process.env.HIGGSFIELD_API_KEY}`);
 });
