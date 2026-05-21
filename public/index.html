@@ -570,9 +570,6 @@ function renderResults(data) {
     <div class="stat"><div class="stat-val">${data.split_count || 0}</div><div class="stat-label">Розбити</div></div>
   `;
 
-  document.getElementById('exportHint').innerHTML =
-    `<b>${scenes.length - monoCount}</b> сцен для Magnific · <b>${monoCount}</b> монологів окремо`;
-
   document.getElementById('charsSummary').innerHTML = (data.characters || []).map(c => {
     const co = chars.find(x => x.name.toLowerCase() === c.role.toLowerCase());
     return `<div class="char-pill">${co?.imageB64 ? `<img src="${co.imageB64}" />` : ''}<span class="char-pill-name">${c.alias}</span><span style="font-size:12px;color:var(--muted)">${c.role}</span></div>`;
