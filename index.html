@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cartoon Pipeline AUTO</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0e0e0f;
+    --surface: #161618;
+    --surface2: #1e1e21;
+    --border: #2a2a2e;
+    --border2: #3a3a3f;
+    --text: #f0f0ee;
+    --muted: #888884;
+    --accent: #c8f060;
+    --accent2: #60d0f0;
+    --warn: #f0b060;
+    --danger: #f06060;
+    --purple: #b060f0;
+    --radius: 8px;
+    --radius-lg: 12px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 15px; line-height: 1.6; min-height: 100vh; }
+
+  .header { border-bottom: 1px solid var(--border); padding: 20px 32px; display: flex; align-items: center; justify-content: space-between; }
+  .logo { font-family: 'DM Mono', monospace; font-size: 13px; color: var(--accent); letter-spacing: 0.08em; }
+  .logo span { color: var(--muted); }
+  .logo-badge { font-family: 'DM Mono', monospace; font-size: 10px; background: rgba(200,240,96,0.12); color: var(--accent); border: 1px solid rgba(200,240,96,0.25); border-radius: 99px; padding: 2px 10px; letter-spacing: 0.08em; }
+
+  .main { max-width: 900px; margin: 0 auto; padding: 40px 32px; }
+
+  .step { margin-bottom: 32px; }
+  .step-label { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--accent); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+  .step-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+  input[type="text"], textarea {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 14px; padding: 10px 14px;
+    outline: none; transition: border-color 0.2s; width: 100%;
+  }
+  input:focus, textarea:focus { border-color: var(--border2); }
+  textarea { resize: vertical; line-height: 1.7; }
+
+  .chars-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; margin-bottom: 12px; }
+  .char-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 14px; position: relative; }
+  .char-card.has-image { border-color: var(--border2); }
+  .char-photo { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: var(--radius); margin-bottom: 10px; display: block; }
+  .char-photo-placeholder { width: 100%; aspect-ratio: 1; border-radius: var(--radius); margin-bottom: 10px; background: var(--surface2); border: 1px dashed var(--border2); display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 28px; color: var(--muted); transition: all 0.2s; flex-direction: column; gap: 6px; }
+  .char-photo-placeholder:hover { border-color: var(--accent); color: var(--accent); }
+  .char-photo-placeholder.drag-over { border-color: var(--accent); color: var(--accent); background: rgba(200,240,96,0.06); transform: scale(1.02); }
+  .char-photo-placeholder span { font-size: 11px; color: var(--muted); font-family: 'DM Mono', monospace; }
+  .char-name-input { font-size: 13px; padding: 7px 10px; }
+  .char-remove { position: absolute; top: 8px; right: 8px; width: 22px; height: 22px; border-radius: 50%; background: var(--surface2); border: 1px solid var(--border); color: var(--muted); cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
+  .char-remove:hover { background: var(--danger); border-color: var(--danger); color: white; }
+  .add-char-btn { border: 1px dashed var(--border2); border-radius: var(--radius-lg); padding: 14px; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; color: var(--muted); font-size: 13px; background: transparent; transition: all 0.2s; width: 100%; }
+  .add-char-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  .btn { padding: 10px 20px; border-radius: var(--radius); font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 500; cursor: pointer; border: none; transition: all 0.2s; display: inline-flex; align-items: center; gap: 8px; }
+  .btn-primary { background: var(--accent); color: #0e0e0f; }
+  .btn-primary:hover { opacity: 0.88; }
+  .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn-outline { background: transparent; border: 1px solid var(--border2); color: var(--text); }
+  .btn-outline:hover { border-color: var(--text); }
+  .btn-copy { background: var(--surface2); border: 1px solid var(--border); color: var(--muted); font-size: 12px; padding: 6px 12px; font-family: 'DM Mono', monospace; }
+  .btn-copy:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-copy.copied { border-color: var(--accent); color: var(--accent); }
+
+  /* === НОВІ СТИЛІ ДЛЯ ЕКСПОРТУ === */
+  .btn-export-txt { background: rgba(96,208,240,0.1); border: 1px solid rgba(96,208,240,0.3); color: var(--accent2); font-size: 13px; padding: 8px 16px; font-family: 'DM Mono', monospace; border-radius: var(--radius); cursor: pointer; transition: all 0.2s; }
+  .btn-export-txt:hover { background: rgba(96,208,240,0.2); }
+  .btn-export-json { background: rgba(176,96,240,0.1); border: 1px solid rgba(176,96,240,0.3); color: var(--purple); font-size: 13px; padding: 8px 16px; font-family: 'DM Mono', monospace; border-radius: var(--radius); cursor: pointer; transition: all 0.2s; }
+  .btn-export-json:hover { background: rgba(176,96,240,0.2); }
+  .export-panel { background: var(--surface); border: 1px solid var(--border2); border-radius: var(--radius-lg); padding: 18px 20px; margin-bottom: 28px; }
+  .export-panel-label { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--purple); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 12px; }
+  .export-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+  .export-hint { font-size: 12px; color: var(--muted); margin-top: 10px; font-family: 'DM Mono', monospace; }
+  .export-hint b { color: var(--accent); font-weight: 400; }
+  .badge-mono { background: rgba(240,176,96,0.12); color: var(--warn); border: 1px solid rgba(240,176,96,0.2); font-size: 10px; padding: 2px 8px; border-radius: 99px; font-family: 'DM Mono', monospace; }
+  .badge-num { background: rgba(176,96,240,0.12); color: var(--purple); border: 1px solid rgba(176,96,240,0.2); font-size: 10px; padding: 2px 8px; border-radius: 99px; font-family: 'DM Mono', monospace; }
+  .prompt-item.is-mono { border-left: 3px solid var(--warn); }
+  /* ================================ */
+
+  .progress { display: none; margin-top: 20px; }
+  .progress.show { display: block; }
+  .progress-bar { height: 2px; background: var(--border); border-radius: 1px; overflow: hidden; margin-bottom: 10px; }
+  .progress-fill { height: 100%; background: var(--accent); width: 0%; transition: width 0.4s ease; }
+  .progress-msg { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--muted); }
+
+  .results { display: none; margin-top: 40px; }
+  .results.show { display: block; }
+
+  .tabs { display: flex; gap: 2px; margin-bottom: 20px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 4px; width: fit-content; }
+  .tab { padding: 7px 18px; border-radius: 6px; font-size: 13px; cursor: pointer; color: var(--muted); font-family: 'DM Mono', monospace; transition: all 0.2s; border: none; background: transparent; }
+  .tab.active { background: var(--surface2); color: var(--text); border: 1px solid var(--border2); }
+
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  .summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 28px; }
+  .stat { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; }
+  .stat-val { font-size: 26px; font-weight: 300; color: var(--accent); font-family: 'DM Mono', monospace; }
+  .stat-label { font-size: 11px; color: var(--muted); margin-top: 2px; text-transform: uppercase; letter-spacing: 0.06em; }
+
+  .chars-summary { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 28px; }
+  .char-pill { background: var(--surface); border: 1px solid var(--border); border-radius: 99px; padding: 5px 14px; font-size: 13px; display: flex; align-items: center; gap: 8px; }
+  .char-pill img { width: 22px; height: 22px; border-radius: 50%; object-fit: cover; }
+  .char-pill-name { color: var(--accent2); font-family: 'DM Mono', monospace; font-size: 12px; }
+
+  .copy-all-row { display: flex; justify-content: flex-end; margin-bottom: 14px; }
+
+  .prompt-list { display: flex; flex-direction: column; gap: 10px; }
+  .prompt-item { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 16px; cursor: pointer; transition: border-color 0.15s; }
+  .prompt-item:hover { border-color: var(--border2); }
+  .prompt-item.selected { border-color: var(--accent); background: rgba(200,240,96,0.04); }
+  .prompt-checkbox { width: 16px; height: 16px; border-radius: 4px; border: 1.5px solid var(--border2); background: transparent; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; transition: all 0.15s; }
+  .prompt-item.selected .prompt-checkbox { background: var(--accent); border-color: var(--accent); }
+  .prompt-item.selected .prompt-checkbox::after { content: '✓'; font-size: 10px; color: #0e0e0f; font-weight: 700; }
+  .selection-bar { display: none; position: sticky; bottom: 20px; background: var(--surface2); border: 1px solid var(--accent); border-radius: var(--radius-lg); padding: 12px 16px; margin-top: 16px; align-items: center; justify-content: space-between; gap: 12px; box-shadow: 0 4px 24px rgba(0,0,0,0.4); }
+  .selection-bar.show { display: flex; }
+  .selection-count { font-family: 'DM Mono', monospace; font-size: 13px; color: var(--accent); }
+  .prompt-item-title { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .badge { font-size: 10px; padding: 2px 8px; border-radius: 99px; font-family: 'DM Mono', monospace; font-weight: 500; }
+  .badge-kling { background: rgba(96,208,240,0.12); color: var(--accent2); border: 1px solid rgba(96,208,240,0.2); }
+  .badge-heygen { background: rgba(240,176,96,0.12); color: var(--warn); border: 1px solid rgba(240,176,96,0.2); }
+  .badge-split { background: rgba(200,240,96,0.12); color: var(--accent); border: 1px solid rgba(200,240,96,0.2); }
+  .prompt-text { font-size: 13px; color: #c8c8c4; line-height: 1.7; font-family: 'DM Mono', monospace; white-space: pre-wrap; word-break: break-word; }
+
+  .error-box { background: rgba(240,96,96,0.08); border: 1px solid rgba(240,96,96,0.25); border-radius: var(--radius); padding: 14px 16px; color: var(--danger); font-size: 13px; margin-top: 16px; display: none; }
+  .error-box.show { display: block; }
+
+  .preset-btn { font-size: 13px; padding: 7px 14px; }
+  .preset-btn.active { border-color: var(--accent); color: var(--accent); background: rgba(200,240,96,0.08); }
+
+  .toast { position: fixed; bottom: 32px; left: 50%; transform: translateX(-50%) translateY(80px); background: var(--surface2); border: 1px solid var(--accent); color: var(--accent); font-family: 'DM Mono', monospace; font-size: 13px; padding: 10px 22px; border-radius: var(--radius-lg); opacity: 0; transition: all 0.3s ease; pointer-events: none; z-index: 999; }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* === ГАЛЕРЕЯ ЗГЕНЕРОВАНИХ КАРТИНОК === */
+  .btn-generate { background: var(--accent); color: #0e0e0f; font-size: 14px; font-weight: 500; padding: 12px 24px; border-radius: var(--radius); border: none; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 8px; font-family: 'DM Sans', sans-serif; }
+  .btn-generate:hover { opacity: 0.88; }
+  .btn-generate:disabled { opacity: 0.4; cursor: not-allowed; }
+  .generate-panel { background: var(--surface); border: 1px solid var(--border2); border-radius: var(--radius-lg); padding: 18px 20px; margin-bottom: 28px; border-color: rgba(200,240,96,0.3); }
+  .generate-panel-label { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--accent); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 12px; }
+  .generate-progress { margin-top: 14px; display: none; }
+  .generate-progress.show { display: block; }
+  .gen-bar { height: 3px; background: var(--border); border-radius: 2px; overflow: hidden; margin-bottom: 8px; }
+  .gen-bar-fill { height: 100%; background: var(--accent); transition: width 0.4s ease; width: 0%; }
+  .gen-status { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--muted); }
+  .gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; margin-top: 20px; }
+  .gallery-item { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; position: relative; }
+  .gallery-item img { width: 100%; aspect-ratio: 16/9; object-fit: cover; display: block; }
+  .gallery-item.loading { aspect-ratio: 16/9; display: flex; align-items: center; justify-content: center; background: var(--surface2); }
+  .gallery-item.loading .spinner { width: 24px; height: 24px; border: 2px solid var(--border2); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
+  .gallery-item.error { aspect-ratio: 16/9; display: flex; align-items: center; justify-content: center; background: rgba(240,96,96,0.05); }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .gallery-label { padding: 8px 10px; font-family: 'DM Mono', monospace; font-size: 11px; color: var(--muted); display: flex; align-items: center; justify-content: space-between; }
+  .gallery-label span { color: var(--purple); }
+  .btn-dl { background: transparent; border: none; color: var(--muted); cursor: pointer; font-size: 16px; padding: 2px 4px; transition: color 0.2s; }
+  .btn-dl:hover { color: var(--accent); }
+  .aspect-select { background: var(--surface2); border: 1px solid var(--border); color: var(--text); font-family: 'DM Mono', monospace; font-size: 12px; padding: 5px 10px; border-radius: var(--radius); outline: none; margin-left: 10px; }
+
+  @media (max-width: 600px) {
+    .main { padding: 24px 16px; }
+    .summary-grid { grid-template-columns: repeat(2, 1fr); }
+    .header { padding: 16px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">cartoon<span>/</span>pipeline</div>
+  <div class="logo-badge">AUTO v2</div>
+</div>
+
+<div class="main">
+
+  <div class="step">
+    <div class="step-label">01 — Стиль проекту</div>
+    <div style="display:flex; gap:8px; margin-bottom:10px; flex-wrap:wrap;">
+      <button class="btn btn-outline preset-btn" onclick="setStyle('3D cartoon')">3D cartoon</button>
+      <button class="btn btn-outline preset-btn" onclick="setStyle('2D cartoon')">2D cartoon</button>
+      <button class="btn btn-outline preset-btn" onclick="setStyle('realistic style')">realistic style</button>
+    </div>
+    <input type="text" id="projectStyle" placeholder="або впиши свій стиль..." />
+  </div>
+
+  <div class="step">
+    <div class="step-label">02 — Персонажі</div>
+    <div class="chars-grid" id="charsGrid"></div>
+    <button class="add-char-btn" onclick="addChar()">+ Додати персонажа</button>
+  </div>
+
+  <div class="step">
+    <div class="step-label">03 — Сценарій</div>
+    <textarea id="scriptInput" rows="12" placeholder="[Кадр 1 — спальня, ніч] Чоловік тягнеться до дружини в ліжку...&#10;&#10;[Кадр 2 — кухня, вечір] Вони вечеряють разом..."></textarea>
+  </div>
+
+  <button class="btn btn-primary" id="analyzeBtn" onclick="analyze()">
+    Аналізувати сценарій
+  </button>
+
+  <div class="progress" id="progress">
+    <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+    <div class="progress-msg" id="progressMsg">Ініціалізація...</div>
+  </div>
+  <div class="error-box" id="errorBox"></div>
+
+  <div class="results" id="results">
+    <div class="summary-grid" id="summaryGrid"></div>
+    <div class="chars-summary" id="charsSummary"></div>
+
+    <!-- ЕКСПОРТ ПАНЕЛЬ -->
+    <div class="export-panel">
+      <div class="export-panel-label">⬡ Експорт для автоматизації</div>
+      <div class="export-row">
+        <button class="btn-export-txt" onclick="exportHiggsfield()">⬇ Higgsfield промпти (.txt)</button>
+        <button class="btn-export-json" onclick="exportMagnific()">⬇ Magnific List (.json)</button>
+        <button class="btn-export-json" onclick="exportAll()">⬇ Усі дані (.json)</button>
+      </div>
+      <div class="export-hint" id="exportHint">— доступно після аналізу сценарію</div>
+    </div>
+
+    <!-- ПАНЕЛЬ ГЕНЕРАЦІЇ КАРТИНОК -->
+    <div class="generate-panel">
+      <div class="generate-panel-label">⚡ Генерація картинок через Higgsfield Seedream</div>
+      <div style="display:flex;align-items:center;flex-wrap:wrap;gap:10px;">
+        <button class="btn-generate" id="generateBtn" onclick="generateAll()">▶ Згенерувати всі картинки</button>
+        <select class="aspect-select" id="aspectRatio">
+          <option value="16:9">16:9 горизонталь</option>
+          <option value="9:16">9:16 вертикаль</option>
+          <option value="1:1">1:1 квадрат</option>
+        </select>
+        <span style="font-size:12px;color:var(--muted);font-family:'DM Mono',monospace;">— монологи пропускаються автоматично</span>
+      </div>
+      <div class="generate-progress" id="generateProgress">
+        <div class="gen-bar"><div class="gen-bar-fill" id="genBarFill"></div></div>
+        <div class="gen-status" id="genStatus">Підготовка...</div>
+      </div>
+      <div class="gallery" id="gallery"></div>
+    </div>
+
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('image')">image prompts</button>
+      <button class="tab" onclick="switchTab('video')">video prompts</button>
+      <button class="tab" onclick="switchTab('analysis')">аналіз сцен</button>
+    </div>
+
+    <div class="tab-content active" id="tab-image">
+      <div class="copy-all-row">
+        <button class="btn btn-copy" id="copyAllImage" onclick="copyAll('image')">copy all image prompts</button>
+      </div>
+      <div class="prompt-list" id="imagePrompts"></div>
+      <div class="selection-bar" id="selBar-image">
+        <span class="selection-count" id="selCount-image">0 вибрано</span>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-copy" onclick="clearSelection('image')">скасувати</button>
+          <button class="btn btn-primary" style="font-size:13px;padding:7px 14px;" onclick="copySelected('image')">копіювати вибрані</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="tab-content" id="tab-video">
+      <div class="copy-all-row">
+        <button class="btn btn-copy" id="copyAllVideo" onclick="copyAll('video')">copy all video prompts</button>
+      </div>
+      <div class="prompt-list" id="videoPrompts"></div>
+      <div class="selection-bar" id="selBar-video">
+        <span class="selection-count" id="selCount-video">0 вибрано</span>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-copy" onclick="clearSelection('video')">скасувати</button>
+          <button class="btn btn-primary" style="font-size:13px;padding:7px 14px;" onclick="copySelected('video')">копіювати вибрані</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="tab-content" id="tab-analysis">
+      <div class="copy-all-row">
+        <button class="btn btn-copy" id="copyAllAnalysis" onclick="copyAll('analysis')">copy all аналіз сцен</button>
+      </div>
+      <div class="prompt-list" id="analysisItems"></div>
+      <div class="selection-bar" id="selBar-analysis">
+        <span class="selection-count" id="selCount-analysis">0 вибрано</span>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-copy" onclick="clearSelection('analysis')">скасувати</button>
+          <button class="btn btn-primary" style="font-size:13px;padding:7px 14px;" onclick="copySelected('analysis')">копіювати вибрані</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+let chars = [];
+let analysisResult = null;
+let charIdCounter = 0;
+const selected = { image: new Set(), video: new Set(), analysis: new Set() };
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// === ЕКСПОРТ ===
+function exportHiggsfield() {
+  if (!analysisResult) return;
+  const style = document.getElementById('projectStyle').value || 'N/A';
+  const lines = [
+    'CARTOON PIPELINE — IMAGE PROMPTS FOR HIGGSFIELD/SEEDREAM',
+    'Style: ' + style,
+    'Generated: ' + new Date().toLocaleString('uk-UA'),
+    'Total scenes: ' + analysisResult.scenes.length,
+    '', '='.repeat(60), ''
+  ];
+  analysisResult.scenes.forEach(s => {
+    const isMono = s.is_heygen;
+    lines.push(`СЦЕНА ${s.number} — ${s.location} (${s.time})`);
+    if (isMono) lines.push('⚠ МОНОЛОГ — обробляти окремо, НЕ додавати в Magnific List');
+    lines.push(`Тривалість: ${s.duration_seconds || '?'}с | Персонажі: ${(s.characters_present||[]).join(', ')}`);
+    lines.push('');
+    lines.push('IMAGE PROMPT:');
+    lines.push(s.image_prompt || '');
+    lines.push('', '-'.repeat(60), '');
+  });
+  download('higgsfield_image_prompts.txt', lines.join('\n'));
+  showToast('Завантажено higgsfield_image_prompts.txt');
+}
+
+function exportMagnific() {
+  if (!analysisResult) return;
+  const scenes = analysisResult.scenes.filter(s => !s.is_heygen).map(s => ({
+    scene_number: s.number,
+    location: s.location,
+    time: s.time,
+    duration_seconds: s.duration_seconds || 8,
+    characters: s.characters_present || [],
+    image_prompt: s.image_prompt,
+    video_prompt: s.video_prompt
+  }));
+  const out = {
+    project: { style: document.getElementById('projectStyle').value || '', exported_at: new Date().toISOString(), total: scenes.length, note: 'Монологи (is_heygen) виключені' },
+    scenes
+  };
+  download('magnific_list.json', JSON.stringify(out, null, 2));
+  showToast('Завантажено magnific_list.json');
+}
+
+function exportAll() {
+  if (!analysisResult) return;
+  const out = {
+    meta: { style: document.getElementById('projectStyle').value || '', exported_at: new Date().toISOString() },
+    characters: analysisResult.characters || [],
+    scenes: analysisResult.scenes
+  };
+  download('cartoon_pipeline_full.json', JSON.stringify(out, null, 2));
+  showToast('Завантажено cartoon_pipeline_full.json');
+}
+
+function download(filename, content) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([content], { type: 'text/plain;charset=utf-8' }));
+  a.download = filename;
+  a.click();
+}
+
+// === ОРИГІНАЛЬНИЙ КОД ===
+function toggleSelect(type, id, el) {
+  if (selected[type].has(id)) { selected[type].delete(id); el.classList.remove('selected'); }
+  else { selected[type].add(id); el.classList.add('selected'); }
+  updateSelBar(type);
+}
+function updateSelBar(type) {
+  const count = selected[type].size;
+  document.getElementById('selBar-' + type).classList.toggle('show', count > 0);
+  document.getElementById('selCount-' + type).textContent = count + ' вибрано';
+}
+function clearSelection(type) {
+  selected[type].clear();
+  document.querySelectorAll(`#tab-${type} .prompt-item`).forEach(el => el.classList.remove('selected'));
+  updateSelBar(type);
+}
+function copySelected(type) {
+  if (!analysisResult) return;
+  const ids = [...selected[type]];
+  let text = '';
+  if (type === 'image') text = analysisResult.scenes.filter(s => ids.includes(s.number)).map(s => `=== Scene ${s.number}: ${s.location} ===\n${s.image_prompt}`).join('\n\n');
+  else if (type === 'video') text = analysisResult.scenes.filter(s => ids.includes(s.number)).map(s => `=== Scene ${s.number}: ${s.location} · ${s.duration_seconds || ''}s ===\n${s.video_prompt}`).join('\n\n');
+  else if (type === 'analysis') text = analysisResult.scenes.filter(s => ids.includes(s.number)).map(s => `=== Scene ${s.number}: ${s.location} · ${s.time} ===\nПерсонажі: ${s.characters_present.join(', ')}\nДія: ${s.action}${s.dialogue ? '\nДіалог: ' + s.dialogue : ''}`).join('\n\n');
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.querySelector(`#selBar-${type} .btn-primary`);
+    btn.textContent = 'скопійовано!';
+    setTimeout(() => { btn.textContent = 'копіювати вибрані'; clearSelection(type); }, 2000);
+  });
+}
+function setStyle(val) {
+  document.getElementById('projectStyle').value = val;
+  document.querySelectorAll('.preset-btn').forEach(b => b.classList.toggle('active', b.textContent.trim() === val));
+}
+function addChar() {
+  const id = ++charIdCounter;
+  chars.push({ id, name: '', imageB64: null });
+  renderChars();
+}
+function removeChar(id) {
+  chars = chars.filter(c => c.id !== id);
+  renderChars();
+}
+function renderChars() {
+  const grid = document.getElementById('charsGrid');
+  grid.innerHTML = '';
+  chars.forEach(c => {
+    const div = document.createElement('div');
+    div.className = 'char-card' + (c.imageB64 ? ' has-image' : '');
+    div.innerHTML = `
+      <button class="char-remove" onclick="removeChar(${c.id})">×</button>
+      ${c.imageB64
+        ? `<img class="char-photo" src="${c.imageB64}" onclick="triggerUpload(${c.id})" style="cursor:pointer;" title="Натисни щоб замінити" />`
+        : `<div class="char-photo-placeholder" onclick="triggerUpload(${c.id})" ondragover="handleDragOver(event,${c.id})" ondragleave="handleDragLeave(event,${c.id})" ondrop="handleDrop(event,${c.id})" id="placeholder-${c.id}">
+              <span style="font-size:24px">+</span><span>перетягни або натисни</span>
+           </div>`}
+      <input class="char-name-input" type="text" placeholder="Роль (напр: чоловік)" value="${c.name}" oninput="updateCharName(${c.id}, this.value)" />
+      <input type="file" id="file-${c.id}" accept="image/*" onchange="handleImage(${c.id}, this)" style="display:none" />`;
+    grid.appendChild(div);
+  });
+}
+function triggerUpload(id) { document.getElementById('file-' + id)?.click(); }
+function handleDragOver(e, id) { e.preventDefault(); e.stopPropagation(); document.getElementById('placeholder-' + id)?.classList.add('drag-over'); }
+function handleDragLeave(e, id) { e.preventDefault(); e.stopPropagation(); document.getElementById('placeholder-' + id)?.classList.remove('drag-over'); }
+function handleDrop(e, id) {
+  e.preventDefault(); e.stopPropagation();
+  document.getElementById('placeholder-' + id)?.classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  if (!file || !file.type.startsWith('image/')) return;
+  loadImageFile(id, file);
+}
+function loadImageFile(id, file) {
+  const reader = new FileReader();
+  reader.onload = e => { const c = chars.find(x => x.id === id); if (c) { c.imageB64 = e.target.result; renderChars(); } };
+  reader.readAsDataURL(file);
+}
+function updateCharName(id, val) { const c = chars.find(x => x.id === id); if (c) c.name = val; }
+function handleImage(id, input) { const file = input.files[0]; if (!file) return; loadImageFile(id, file); }
+function setProgress(pct, msg) {
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('progressMsg').textContent = msg;
+}
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach((t, i) => t.classList.toggle('active', ['image','video','analysis'][i] === name));
+  document.querySelectorAll('.tab-content').forEach(tc => tc.classList.toggle('active', tc.id === 'tab-' + name));
+}
+function copyAll(type) {
+  if (!analysisResult) return;
+  let text = '';
+  if (type === 'image') text = analysisResult.scenes.map(s => `=== Scene ${s.number}: ${s.location} ===\n${s.image_prompt}`).join('\n\n');
+  else if (type === 'video') text = analysisResult.scenes.map(s => `=== Scene ${s.number}: ${s.location} · ${s.duration_seconds ? s.duration_seconds + 's' : ''} ===\n${s.video_prompt}`).join('\n\n');
+  else if (type === 'analysis') text = analysisResult.scenes.map(s => `=== Scene ${s.number}: ${s.location} · ${s.time} ===\nПерсонажі: ${s.characters_present.join(', ')}\nДія: ${s.action}${s.dialogue ? '\nДіалог: ' + s.dialogue : ''}${s.should_split ? '\n⚠ ' + s.split_reason : ''}`).join('\n\n');
+  const btnId = type === 'image' ? 'copyAllImage' : type === 'video' ? 'copyAllVideo' : 'copyAllAnalysis';
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.getElementById(btnId);
+    const orig = btn.textContent;
+    btn.textContent = 'copied!'; btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = orig; btn.classList.remove('copied'); }, 2000);
+  });
+}
+function copyPrompt(btn, id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  navigator.clipboard.writeText(el.textContent).then(() => {
+    btn.textContent = 'copied!'; btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = 'copy'; btn.classList.remove('copied'); }, 2000);
+  });
+}
+
+async function analyze() {
+  const script = document.getElementById('scriptInput').value.trim();
+  const style = document.getElementById('projectStyle').value.trim() || 'cinematic photorealistic animation';
+  if (!script) return;
+
+  document.getElementById('errorBox').className = 'error-box';
+  document.getElementById('results').className = 'results';
+  document.getElementById('progress').className = 'progress show';
+  document.getElementById('analyzeBtn').disabled = true;
+  setProgress(10, 'Підготовка запиту...');
+
+  const charsWithImages = chars.filter(c => c.name);
+  let charDescSection = charsWithImages.length > 0
+    ? '\n\nCHARACTER REFERENCES:\n' + charsWithImages.map(c => `- Role: "${c.name}" ${c.imageB64 ? '(image attached)' : ''}`).join('\n')
+    : '';
+
+  // ОРИГІНАЛЬНИЙ СИСТЕМНИЙ ПРОМПТ — без змін
+  const systemPrompt = `You are a JSON API. You must respond with ONLY a valid JSON object. No explanations, no apologies, no markdown, no backticks, no text before or after the JSON. Never write "I'm sorry" or any other text — only JSON.
+
+CRITICAL: You MUST process EVERY scene in the screenplay. If there are 24 scenes, output all 24. Do not stop early. Do not summarize. Every [Кадр N] or [Frame N] must become a separate scene object in the array.
+
+Animation project style: "${style}"${charDescSection}
+
+Return this exact JSON structure:
+{
+  "characters": [
+    {"role": "role name", "alias": "short English alias", "visual": "detailed visual description from the reference image: hair color/style, face features, approximate age, body type, typical clothing style"}
+  ],
+  "scenes": [
+    {
+      "number": 1,
+      "location": "location in Ukrainian",
+      "time": "time of day in Ukrainian",
+      "characters_present": ["alias1"],
+      "action": "brief action description in Ukrainian",
+      "dialogue": "all dialogue lines verbatim from this scene",
+      "is_heygen": false,
+      "should_split": false,
+      "split_reason": "",
+      "image_prompt": "Follow this exact structure: 1) Shot type (medium shot / close-up / wide shot etc) 2) Location with lighting description (e.g. 'lit by a soft warm floor lamp') 3) Characters wearing specific clothing (e.g. 'comfortable cotton pajamas') 4) Each character's exact body position, gesture, and facial expression 5) Key background details (furniture, objects, atmosphere). Use the character's visual description. Write in English, 3-5 sentences. Style: ${style}.",
+      "video_prompt": "Take the original scene text from the screenplay exactly as written (actions + dialogue verbatim) and add emotional descriptions for each character in parentheses — describing how they feel physically and emotionally (e.g. 'with a tense, guarded posture', 'eyes avoiding contact', 'a quiet longing in his expression'). Keep the original Ukrainian/English text. Do not rewrite, summarize or replace anything.",
+      "duration_seconds": "estimated scene duration in seconds — choose from: 6, 8, 10, 12, 15. Base this on: amount of action, number of dialogue lines, emotional weight. Short silent moment = 6s. Brief dialogue = 8s. Normal scene with 2-3 lines = 10s. Longer dialogue or complex action = 12s. Long scene with many lines = 15s."
+    }
+  ],
+  "total_scenes": 0,
+  "heygen_count": 0,
+  "split_count": 0
+}
+
+Rules:
+- PROCESS ALL SCENES — never skip any
+- should_split = true if scene has very distinct location changes
+- is_heygen = true for long monologue scenes (4+ dialogue lines, minimal physical action) — these go to HeyGen/separate pipeline, NOT Magnific List
+- Describe characters in image_prompt by visual appearance only, never by role name
+- In video_prompt: copy the original scene text exactly and only ADD emotional descriptions in parentheses — never remove or replace original text
+- Return ONLY the JSON, nothing else`;
+
+  const userText = 'SCREENPLAY:\n' + script;
+  const images = charsWithImages.filter(c => c.imageB64).map(c => ({ data: c.imageB64 }));
+
+  try {
+    setProgress(30, 'Надсилаємо до GPT-4o...');
+    const resp = await fetch('/api/analyze', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ systemPrompt, userText, images })
+    });
+    setProgress(70, 'Отримуємо відповідь...');
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.error || 'Server error');
+
+    const raw = data.text || '';
+    const clean = raw.replace(/```json|```/g, '').trim();
+    analysisResult = JSON.parse(clean);
+
+    setProgress(100, 'Готово!');
+    setTimeout(() => {
+      document.getElementById('progress').className = 'progress';
+      document.getElementById('analyzeBtn').disabled = false;
+      renderResults(analysisResult);
+      document.getElementById('results').className = 'results show';
+    }, 400);
+
+  } catch (err) {
+    document.getElementById('progress').className = 'progress';
+    document.getElementById('analyzeBtn').disabled = false;
+    const box = document.getElementById('errorBox');
+    box.className = 'error-box show';
+    box.textContent = 'Помилка: ' + err.message;
+  }
+}
+
+function renderResults(data) {
+  const scenes = data.scenes || [];
+  const monoCount = scenes.filter(s => s.is_heygen).length;
+
+  document.getElementById('summaryGrid').innerHTML = `
+    <div class="stat"><div class="stat-val">${data.total_scenes || scenes.length}</div><div class="stat-label">Сцен всього</div></div>
+    <div class="stat"><div class="stat-val">${scenes.length - monoCount}</div><div class="stat-label">Для Magnific</div></div>
+    <div class="stat"><div class="stat-val">${monoCount}</div><div class="stat-label">Монологів</div></div>
+    <div class="stat"><div class="stat-val">${data.split_count || 0}</div><div class="stat-label">Розбити</div></div>
+  `;
+
+  document.getElementById('exportHint').innerHTML =
+    `<b>${scenes.length - monoCount}</b> сцен для Magnific · <b>${monoCount}</b> монологів окремо`;
+
+  document.getElementById('charsSummary').innerHTML = (data.characters || []).map(c => {
+    const co = chars.find(x => x.name.toLowerCase() === c.role.toLowerCase());
+    return `<div class="char-pill">${co?.imageB64 ? `<img src="${co.imageB64}" />` : ''}<span class="char-pill-name">${c.alias}</span><span style="font-size:12px;color:var(--muted)">${c.role}</span></div>`;
+  }).join('');
+
+  const imgList = document.getElementById('imagePrompts');
+  const vidList = document.getElementById('videoPrompts');
+  const anList  = document.getElementById('analysisItems');
+  imgList.innerHTML = vidList.innerHTML = anList.innerHTML = '';
+
+  scenes.forEach(s => {
+    const isMono = s.is_heygen;
+    const numBadge = `<span class="badge-num">#${s.number}</span>`;
+    const monoBadge = isMono ? `<span class="badge-mono">монолог</span>` : '';
+    const splitBadge = s.should_split ? `<span class="badge badge-split">split</span>` : '';
+    const title = `${numBadge} ${s.location} · ${s.time} ${monoBadge} ${splitBadge}`;
+
+    // Image prompt
+    const imgDiv = document.createElement('div');
+    imgDiv.className = 'prompt-item' + (isMono ? ' is-mono' : '');
+    imgDiv.onclick = (e) => { if (!e.target.closest('button')) toggleSelect('image', s.number, imgDiv); };
+    imgDiv.innerHTML = `
+      <div style="display:flex;align-items:flex-start;gap:10px;">
+        <div class="prompt-checkbox"></div>
+        <div style="flex:1;">
+          <div class="prompt-item-title">${title}<span style="margin-left:auto"><button class="btn btn-copy" style="font-size:11px;padding:4px 10px;" onclick="event.stopPropagation();copyPrompt(this,'ip-${s.number}')">copy</button></span></div>
+          <div class="prompt-text" id="ip-${s.number}" style="margin-top:8px;">${s.image_prompt || ''}</div>
+        </div>
+      </div>`;
+    imgList.appendChild(imgDiv);
+
+    // Video prompt
+    const vidDiv = document.createElement('div');
+    vidDiv.className = 'prompt-item';
+    vidDiv.onclick = (e) => { if (!e.target.closest('button')) toggleSelect('video', s.number, vidDiv); };
+    const durBadge = s.duration_seconds ? `<span class="badge badge-kling">⏱ ${s.duration_seconds}s</span>` : '';
+    const heyBadge = isMono ? `<span class="badge badge-heygen">heygen</span>` : `<span class="badge badge-kling">kling</span>`;
+    vidDiv.innerHTML = `
+      <div style="display:flex;align-items:flex-start;gap:10px;">
+        <div class="prompt-checkbox"></div>
+        <div style="flex:1;">
+          <div class="prompt-item-title">${title} ${durBadge} ${heyBadge}<span style="margin-left:auto"><button class="btn btn-copy" style="font-size:11px;padding:4px 10px;" onclick="event.stopPropagation();copyPrompt(this,'vp-${s.number}')">copy</button></span></div>
+          <div class="prompt-text" id="vp-${s.number}" style="margin-top:8px;">${s.video_prompt || ''}</div>
+        </div>
+      </div>`;
+    vidList.appendChild(vidDiv);
+
+    // Analysis
+    const anDiv = document.createElement('div');
+    anDiv.className = 'prompt-item';
+    anDiv.onclick = (e) => { if (!e.target.closest('button')) toggleSelect('analysis', s.number, anDiv); };
+    anDiv.innerHTML = `
+      <div style="display:flex;align-items:flex-start;gap:10px;">
+        <div class="prompt-checkbox"></div>
+        <div style="flex:1;">
+          <div class="prompt-item-title">${title}</div>
+          <div style="font-size:13px;margin-top:8px;color:var(--muted);">Персонажі: <span style="color:var(--text)">${(s.characters_present||[]).join(', ')}</span></div>
+          <div style="font-size:13px;color:var(--text);margin-top:4px;">${s.action || ''}</div>
+          ${s.dialogue ? `<div style="font-size:13px;color:var(--accent2);margin-top:6px;font-style:italic;white-space:pre-wrap;">${s.dialogue}</div>` : ''}
+          ${s.should_split ? `<div style="font-size:12px;color:var(--accent);margin-top:8px;">⚠ ${s.split_reason}</div>` : ''}
+        </div>
+      </div>`;
+    anList.appendChild(anDiv);
+  });
+}
+
+// === ГЕНЕРАЦІЯ КАРТИНОК ===
+async function generateAll() {
+  if (!analysisResult) { showToast('Спочатку проаналізуй сценарій'); return; }
+
+  const scenes = analysisResult.scenes.filter(s => !s.is_heygen);
+  if (!scenes.length) { showToast('Немає сцен для генерації'); return; }
+
+  const aspect = document.getElementById('aspectRatio').value;
+  const btn = document.getElementById('generateBtn');
+  const progress = document.getElementById('generateProgress');
+  const gallery = document.getElementById('gallery');
+  const barFill = document.getElementById('genBarFill');
+  const status = document.getElementById('genStatus');
+
+  btn.disabled = true;
+  progress.className = 'generate-progress show';
+  gallery.innerHTML = '';
+
+  // Одразу малюємо placeholder-и для всіх сцен
+  scenes.forEach(s => {
+    const item = document.createElement('div');
+    item.className = 'gallery-item loading';
+    item.id = `gal-${s.number}`;
+    item.innerHTML = `<div class="spinner"></div>`;
+    gallery.appendChild(item);
+  });
+
+  let done = 0;
+
+  // Генеруємо по одній (щоб не перевантажити API)
+  for (const scene of scenes) {
+    status.textContent = `Генерую сцену ${scene.number} з ${scenes.length}...`;
+
+    try {
+      const resp = await fetch('/api/generate-image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: scene.image_prompt,
+          scene_number: scene.number,
+          aspect_ratio: aspect
+        })
+      });
+
+      const data = await resp.json();
+      const item = document.getElementById(`gal-${scene.number}`);
+
+      if (!resp.ok || !data.image_url) {
+        item.className = 'gallery-item error';
+        item.innerHTML = `<div style="font-size:11px;color:var(--danger);text-align:center;padding:12px;">#${scene.number}<br>Помилка</div>`;
+      } else {
+        item.className = 'gallery-item';
+        item.innerHTML = `
+          <img src="${data.image_url}" alt="Scene ${scene.number}" loading="lazy" />
+          <div class="gallery-label">
+            <span>#${scene.number}</span>
+            <span style="color:var(--muted);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${scene.location}</span>
+            <button class="btn-dl" onclick="downloadImage('${data.image_url}', 'scene_${String(scene.number).padStart(2,'0')}_${scene.location.replace(/[^a-zA-Zа-яА-Я0-9]/g,'_').slice(0,20)}.jpg')" title="Скачати">⬇</button>
+          </div>`;
+      }
+    } catch (err) {
+      const item = document.getElementById(`gal-${scene.number}`);
+      item.className = 'gallery-item error';
+      item.innerHTML = `<div style="font-size:11px;color:var(--danger);text-align:center;padding:12px;">#${scene.number}<br>${err.message}</div>`;
+    }
+
+    done++;
+    barFill.style.width = Math.round((done / scenes.length) * 100) + '%';
+  }
+
+  status.textContent = `Готово! Згенеровано ${done} з ${scenes.length} сцен`;
+  btn.disabled = false;
+  showToast(`Готово! ${done} картинок згенеровано`);
+}
+
+async function downloadImage(url, filename) {
+  try {
+    const resp = await fetch(url);
+    const blob = await resp.blob();
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    a.click();
+  } catch {
+    window.open(url, '_blank');
+  }
+}
+</script>
+</body>
+</html>
